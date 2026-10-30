@@ -1,0 +1,9 @@
+{
+  "name": "Controle de Defeitos — Bilhan",
+  "short_name": "Defeitos",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#1f2937",
+  "icons": [{ "src": "/icone.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -1,0 +1,21 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# Variáveis de ambiente — NUNCA subir para o GitHub
+.env
+.env.*
+!.env.example
+
+# Configuração pessoal desta máquina
+.claude/settings.local.json
+
+# Editores / sistema
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
