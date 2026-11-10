@@ -344,8 +344,22 @@ function Conferencia({ origem: origemInicial, defeitos, onSalvo, onCancelar }) {
                 <small className="dev-falta">Faltam {it.pedida - it.quantidade} em relação à devolução.</small>
               )}
 
+              {it.estado === 'outra_loja' ? (
+                <div className="dev-outra-loja">
+                  <b>Não é peça nossa</b> — fica registrada para contestar a devolução.
+                  <div className="campo" style={{ marginTop: 8 }}>
+                    <label>Descreva a peça (marca, modelo, cor, tamanho)</label>
+                    <input
+                      type="text"
+                      value={it.variacao ?? ''}
+                      onChange={(e) => mudar(i, { variacao: e.target.value })}
+                      placeholder="Ex.: blusa de outra marca, azul, M"
+                    />
+                  </div>
+                </div>
+              ) : (
               <div className="opcoes dev-estados">
-                {ESTADOS.map((e) => (
+                {ESTADOS.filter((e) => !e.fixo).map((e) => (
                   <button
                     key={e.id}
                     type="button"
@@ -357,6 +371,7 @@ function Conferencia({ origem: origemInicial, defeitos, onSalvo, onCancelar }) {
                   </button>
                 ))}
               </div>
+              )}
 
               {it.estado === 'defeito' && (
                 <div className="campo">
@@ -404,9 +419,30 @@ function Conferencia({ origem: origemInicial, defeitos, onSalvo, onCancelar }) {
             onCancelar={itens.length ? () => setAdicionando(false) : null}
           />
         ) : (
-          <button className="secundario" style={{ width: '100%', marginTop: 12 }} onClick={() => setAdicionando(true)}>
-            + {identificada ? 'Veio outra peça no pacote' : 'Adicionar peça'}
-          </button>
+          <div className="dev-adicionar">
+            <button className="secundario" onClick={() => setAdicionando(true)}>
+              + {identificada ? 'Veio outra peça nossa' : 'Adicionar peça'}
+            </button>
+            <button
+              className="secundario"
+              onClick={() =>
+                setItens((l) => [
+                  ...l,
+                  {
+                    produto: 'Peça de outra loja',
+                    variacao: '',
+                    sku_id: null,
+                    pedida: null,
+                    quantidade: 1,
+                    estado: 'outra_loja',
+                    defeito_id: null,
+                  },
+                ])
+              }
+            >
+              + Veio peça de outra loja
+            </button>
+          </div>
         )}
       </div>
 
@@ -621,7 +657,7 @@ function ListaDevolucoes({ recarregar, defeitos }) {
   const naoIdent = (lista ?? []).filter((d) => !d.identificada).length
 
   const totais = useMemo(() => {
-    const t = { estoque: 0, defeito: 0, perda: 0 }
+    const t = { estoque: 0, defeito: 0, perda: 0, outra_loja: 0 }
     for (const d of visiveis) for (const i of d.itens) t[i.estado] += i.quantidade
     return t
   }, [visiveis])
@@ -672,7 +708,7 @@ function ListaDevolucoes({ recarregar, defeitos }) {
 
       {visiveis.length > 0 && (
         <div className="dev-totais">
-          {ESTADOS.map((e) => (
+          {ESTADOS.filter((e) => !e.fixo || totais[e.id] > 0).map((e) => (
             <span key={e.id} style={{ color: e.cor }}>
               <b>{num(totais[e.id])}</b> {e.curto.toLowerCase()}
             </span>

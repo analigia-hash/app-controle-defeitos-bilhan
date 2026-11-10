@@ -56,3 +56,8 @@
 @media (max-width: 420px) {
   .dev-estados { grid-template-columns: 1fr !important; }
 }
+
+.dev-adicionar { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.dev-outra-loja { margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: #f5f3ff; color: #5b21b6; font-size: 14px; }
+.dev-outra-loja label { color: #5b21b6; }
+@media (max-width: 420px) { .dev-adicionar { grid-template-columns: 1fr; } }

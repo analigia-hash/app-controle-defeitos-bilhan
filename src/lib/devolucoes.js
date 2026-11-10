@@ -10,6 +10,8 @@ export const ESTADOS = [
   { id: 'estoque', nome: 'Volta pro estoque', curto: 'Estoque', cor: '#16a34a' },
   { id: 'defeito', nome: 'Defeito', curto: 'Defeito', cor: '#d97706' },
   { id: 'perda', nome: 'Perda / não volta', curto: 'Perda', cor: '#dc2626' },
+  // não é botão da peça: entra pelo "+ Veio peça de outra loja"
+  { id: 'outra_loja', nome: 'Peça de outra loja', curto: 'Outra loja', cor: '#7c3aed', fixo: true },
 ]
 export const estadoPorId = (id) => ESTADOS.find((e) => e.id === id)
 
