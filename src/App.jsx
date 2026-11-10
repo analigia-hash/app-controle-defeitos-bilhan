@@ -5,10 +5,12 @@ import Lancar from './pages/Lancar.jsx'
 import Historico from './pages/Historico.jsx'
 import Painel from './pages/Painel.jsx'
 import Cadastros from './pages/Cadastros.jsx'
+import Devolucoes from './pages/Devolucoes.jsx'
 
 /* Cada aba tem uma cor própria, no mesmo padrão do app de estoque. */
 const ABAS = [
   { rota: '/lancar',    nome: 'Lançar semana', cor: '#2563eb', clara: '#eff6ff', escura: '#1e40af', papel: 'lancador' },
+  { rota: '/devolucoes', nome: 'Devoluções',   cor: '#be185d', clara: '#fdf2f8', escura: '#9d174d', papel: 'lancador' },
   { rota: '/historico', nome: 'Meu histórico', cor: '#0f766e', clara: '#f0fdfa', escura: '#115e59', papel: 'lancador' },
   { rota: '/painel',    nome: 'Painel',        cor: '#d97706', clara: '#fffbeb', escura: '#92400e', papel: 'gestor' },
   { rota: '/cadastros', nome: 'Cadastros',     cor: '#7c3aed', clara: '#f5f3ff', escura: '#5b21b6', papel: 'admin' },
@@ -85,6 +87,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Navigate to={ehGestor ? '/painel' : '/lancar'} replace />} />
           <Route path="/lancar" element={<Lancar />} />
+          <Route path="/devolucoes" element={<Devolucoes />} />
           <Route path="/historico" element={<Historico />} />
           <Route path="/painel" element={so('gestor', <Painel />)} />
           <Route path="/cadastros" element={so('admin', <Cadastros />)} />

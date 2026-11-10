@@ -29,9 +29,20 @@ com o prefixo `def_` e lê `peca_sku` / `peca_custo` / `dtf_perfil` do estoque, 
 | Aba | Quem vê | O que faz |
 |---|---|---|
 | Lançar semana | todos | escolhe a semana (sábado a sexta), adiciona linhas passo a passo, repete a última linha, avisa e soma duplicadas; gestor fecha/reabre e recalcula |
+| Devoluções | todos | bipa a etiqueta do pacote que voltou (câmera ou leitor), o app acha loja/pedido/peças nas 5 lojas; marca cada peça como estoque, defeito ou perda; pacote sem etiqueta útil vira "não identificada" e o app sugere pedidos pelas peças |
 | Meu histórico | todos | linhas que a própria pessoa lançou, só quantidades |
 | Painel | gestor, admin | filtros, cartões com variação, custo por semana, por defeito, por responsável, por peça, mapas de calor, tabela e exportação CSV |
 | Cadastros | admin | peças, defeitos, finalidades, responsáveis, cores, parâmetros de custo com vigência, usuários |
+
+## Devoluções
+
+- `supabase/003_devolucoes.sql`: tabelas `def_dev_retorno` (devoluções abertas nas lojas), `def_devolucoes` e
+  `def_devolucao_itens` (o que a embalagem registrou) e as funções `def_dev_*`.
+- `supabase/functions/devolucoes-sync`: puxa as devoluções de Shopee Jingas/Bilhan, TikTok Bubli/Bilhan e SHEIN
+  Bilhan (últimos 45 dias). Roda de hora em hora (cron `devolucoes-sync-1h`) e quando um código não é achado.
+- O código bipado casa com o rastreio da volta (SPX `BR…`, Jadlog da SHEIN/TikTok, que vem dentro de um código
+  maior), com o nº do pedido ou com o nº da devolução. Se não houver devolução, procura o pedido nas vendas.
+- Não mexe no estoque: só registra (decisão de 09/11/2026).
 
 ## Publicar na Netlify
 
