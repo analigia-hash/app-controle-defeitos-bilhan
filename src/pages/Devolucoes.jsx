@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAuth } from '../auth/AuthProvider.jsx'
+import Contestar from '../components/Contestar.jsx'
+import { TirarFotos, VerFotos } from '../components/DevFotos.jsx'
 import Leitor from '../components/Leitor.jsx'
 import { useToast } from '../components/Toast.jsx'
 import { carregarListas } from '../lib/dados.js'
@@ -7,13 +9,16 @@ import {
   ESTADOS,
   buscarCodigo,
   candidatos,
+  comprimirFoto,
   estadoPorId,
   excluirDevolucao,
+  listarContestacoes,
   listarDevolucoes,
   nomeLoja,
   pecasEstoque,
   salvarDevolucao,
   sincronizarDevolucoes,
+  subirFotos,
   vincularPedido,
 } from '../lib/devolucoes.js'
 import { dataBR, dataHoraBR, hojeISO, num, somarDias } from '../lib/formato.js'
@@ -233,6 +238,7 @@ function Conferencia({ origem: origemInicial, defeitos, onSalvo, onCancelar }) {
     }))
   )
   const [observacao, setObservacao] = useState('')
+  const [fotos, setFotos] = useState([])
   const [salvando, setSalvando] = useState(false)
   const [adicionando, setAdicionando] = useState(origemInicial.itens?.length ? false : true)
   const [procurando, setProcurando] = useState(false)
@@ -249,7 +255,7 @@ function Conferencia({ origem: origemInicial, defeitos, onSalvo, onCancelar }) {
   const salvar = async () => {
     setSalvando(true)
     try {
-      await salvarDevolucao({
+      const id = await salvarDevolucao({
         codigo_lido: origem.codigo_lido,
         retorno_id: origem.retorno_id ?? null,
         plataforma: origem.plataforma ?? null,
@@ -268,6 +274,13 @@ function Conferencia({ origem: origemInicial, defeitos, onSalvo, onCancelar }) {
           defeito_id: i.estado === 'defeito' ? i.defeito_id : null,
         })),
       })
+      if (fotos.length) {
+        try {
+          await subirFotos(id, fotos.map((f) => f.blob))
+        } catch (e) {
+          toast.erro(`A devolução foi salva, mas as fotos não subiram: ${mensagemErro(e)}`)
+        }
+      }
       toast.ok(identificada ? 'Devolução registrada.' : 'Registrada como não identificada. A Ana resolve depois.')
       onSalvo()
     } catch (e) {
@@ -466,6 +479,17 @@ function Conferencia({ origem: origemInicial, defeitos, onSalvo, onCancelar }) {
       )}
 
       <div className="card">
+        <h3>
+          Fotos <span className="contador">{fotos.length}</span>
+        </h3>
+        <p className="explica">
+          Tire foto do pacote aberto e de cada peça, principalmente se veio peça errada, faltando ou com defeito. É a
+          prova para contestar a devolução.
+        </p>
+        <TirarFotos fotos={fotos} onMudar={setFotos} />
+      </div>
+
+      <div className="card">
         <div className="campo">
           <label htmlFor="obs-dev">Observação (opcional)</label>
           <textarea
@@ -633,7 +657,7 @@ function Candidatos({ skuIds, onEscolher, onFechar }) {
 /* Lista das devoluções recebidas                                       */
 /* ------------------------------------------------------------------ */
 function ListaDevolucoes({ recarregar, defeitos }) {
-  const { ehGestor } = useAuth()
+  const { ehGestor, ehAdmin } = useAuth()
   const toast = useToast()
   const [dias, setDias] = useState(7)
   const [filtro, setFiltro] = useState('todas')
@@ -641,13 +665,41 @@ function ListaDevolucoes({ recarregar, defeitos }) {
   const [erro, setErro] = useState(null)
   const [aberta, setAberta] = useState(null)
   const [vinculando, setVinculando] = useState(null)
+  const [contestando, setContestando] = useState(null)
+  const [contestacoes, setContestacoes] = useState({})
+  const [subindo, setSubindo] = useState(null)
 
   const carregar = useCallback(() => {
     setErro(null)
     listarDevolucoes(somarDias(hojeISO(), -(dias - 1)) + 'T00:00:00-03:00')
-      .then(setLista)
+      .then((l) => {
+        setLista(l)
+        if (ehAdmin)
+          listarContestacoes(l.map((d) => d.id))
+            .then((cs) => {
+              const m = {}
+              for (const c of cs) (m[c.devolucao_id] ??= []).push(c)
+              setContestacoes(m)
+            })
+            .catch(() => {})
+      })
       .catch((e) => setErro(mensagemErro(e)))
-  }, [dias])
+  }, [dias, ehAdmin])
+
+  const maisFotos = async (d, files) => {
+    setSubindo(d.id)
+    try {
+      const blobs = []
+      for (const f of Array.from(files || [])) if (f.type.startsWith('image/')) blobs.push(await comprimirFoto(f))
+      const n = await subirFotos(d.id, blobs)
+      toast.ok(`${n} foto(s) adicionada(s).`)
+      carregar()
+    } catch (e) {
+      toast.erro(mensagemErro(e))
+    } finally {
+      setSubindo(null)
+    }
+  }
 
   useEffect(() => {
     carregar()
@@ -727,6 +779,13 @@ function ListaDevolucoes({ recarregar, defeitos }) {
               <span className="info">
                 <b>
                   {d.identificada ? `${nomeLoja(d.plataforma, d.loja)} · ${d.n_pedido}` : 'Não identificada'}
+                  {d.fotos.length > 0 && <span className="tag-fotos">📷 {d.fotos.length}</span>}
+                  {contestacoes[d.id]?.[0] &&
+                    (contestacoes[d.id][0].ok ? (
+                      <span className="tag-dev">contestada</span>
+                    ) : (
+                      <span className="tag-dev recusada">contestação recusada</span>
+                    ))}
                 </b>
                 <small>
                   {dataHoraBR(d.criado_em)} ·{' '}
@@ -752,8 +811,33 @@ function ListaDevolucoes({ recarregar, defeitos }) {
                 {d.observacao && <div>Obs.: {d.observacao}</div>}
                 {d.codigo_lido && <div className="dev-codigo">Código lido: {d.codigo_lido}</div>}
                 <div>Registrado por {d.criado_por ?? '—'}</div>
+                <VerFotos paths={d.fotos.map((f) => f.path)} />
+                <label className="botao secundario botao-fotos">
+                  {subindo === d.id ? 'Subindo…' : '📷 Adicionar fotos'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    multiple
+                    hidden
+                    disabled={subindo === d.id}
+                    onChange={(e) => maisFotos(d, e.target.files)}
+                  />
+                </label>
+                {ehAdmin &&
+                  (contestacoes[d.id] ?? []).map((c) => (
+                    <div key={c.id} className={c.ok ? 'dev-contest ok' : 'dev-contest erro'}>
+                      {dataHoraBR(c.criado_em)} · {c.motivo_texto} ·{' '}
+                      {c.ok
+                        ? 'enviada'
+                        : `recusada: ${c.resposta?.disputa?.message ?? c.resposta?.tentativas?.at(-1)?.message ?? 'erro'}`}
+                    </div>
+                  ))}
                 {ehGestor && (
                   <div className="linha" style={{ marginTop: 8 }}>
+                    {ehAdmin && d.retorno_id && ['Shopee', 'TikTok Shop'].includes(d.plataforma) && (
+                      <button onClick={() => setContestando(d)}>Contestar</button>
+                    )}
                     {!d.identificada && d.itens.some((i) => i.sku_id) && (
                       <button className="secundario" onClick={() => setVinculando(d)}>
                         Procurar pedido
@@ -769,6 +853,15 @@ function ListaDevolucoes({ recarregar, defeitos }) {
           </li>
         ))}
       </ul>
+
+      {contestando && (
+        <Contestar
+          dev={contestando}
+          nomeDefeito={nomeDefeito}
+          onFechar={() => setContestando(null)}
+          onEnviado={carregar}
+        />
+      )}
 
       {vinculando && (
         <div className="modal-fundo">

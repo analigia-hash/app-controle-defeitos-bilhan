@@ -61,3 +61,33 @@
 .dev-outra-loja { margin: 10px 0; padding: 10px 12px; border-radius: 10px; background: #f5f3ff; color: #5b21b6; font-size: 14px; }
 .dev-outra-loja label { color: #5b21b6; }
 @media (max-width: 420px) { .dev-adicionar { grid-template-columns: 1fr; } }
+
+/* fotos */
+.dev-fotos { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 10px; }
+.dev-foto { position: relative; width: 84px; height: 84px; border-radius: 10px; overflow: hidden; border: 1px solid var(--borda); background: var(--fundo); display: block; }
+.dev-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dev-foto button {
+  position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; min-height: 0; padding: 0;
+  border-radius: 50%; background: rgba(0, 0, 0, .65); color: #fff; font-size: 16px; line-height: 1;
+}
+.botao-fotos { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 8px 14px;
+  border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; background: #e5e7eb; color: var(--texto); margin: 2px 0 6px; }
+.tag-fotos { margin-left: 8px; font-size: 12px; font-weight: 700; color: var(--texto-suave); }
+.tag-dev.recusada { background: #fee2e2; color: #991b1b; }
+.dev-contest { font-size: 13px; padding: 6px 10px; border-radius: 8px; margin: 4px 0; }
+.dev-contest.ok { background: #f0fdf4; color: #166534; }
+.dev-contest.erro { background: #fef2f2; color: #991b1b; }
+
+/* modal de contestação */
+.contestar .explica { margin-bottom: 12px; }
+.contestar-motivos { display: flex; flex-direction: column; gap: 8px; }
+.contestar-motivos label {
+  display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 2px solid var(--borda);
+  border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 600; color: var(--texto); margin: 0;
+}
+.contestar-motivos label.escolhido { border-color: var(--cor); background: var(--cor-clara); }
+.contestar-motivos input { width: 20px; min-height: 0; height: 20px; margin-top: 2px; flex: 0 0 auto; }
+.contestar-motivos small { display: block; font-weight: 400; color: var(--texto-suave); font-size: 12.5px; margin-top: 2px; }
+.dev-lista li > div.dev-detalhe { display: block; min-height: 0; padding: 4px 4px 14px 12px; }
+.dev-lista li > div.dev-detalhe .linha { display: flex; }
+.dev-lista li > div.dev-detalhe .dev-fotos { display: flex; }

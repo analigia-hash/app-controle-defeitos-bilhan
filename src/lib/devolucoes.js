@@ -46,11 +46,92 @@ export const excluirDevolucao = (id) => rpc('def_dev_excluir', { p_id: id })
 export async function listarDevolucoes(desdeISO) {
   const { data, error } = await supabase
     .from('def_devolucoes')
-    .select('*, itens:def_devolucao_itens(*)')
+    .select(
+      '*, itens:def_devolucao_itens(*), fotos:def_devolucao_fotos(id, path), retorno:def_dev_retorno(plataforma, status, devolucao_id)'
+    )
     .eq('excluido', false)
     .gte('criado_em', desdeISO)
     .order('criado_em', { ascending: false })
     .limit(500)
+  if (error) throw error
+  return data
+}
+
+/* ---------------- fotos ---------------- */
+const BUCKET = 'devolucoes'
+
+/** Reduz a foto (até 1600 px, JPEG) antes de subir: a Shopee e o TikTok recusam arquivos grandes. */
+export async function comprimirFoto(file, max = 1600, qualidade = 0.82) {
+  let src
+  try {
+    src = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  } catch {
+    src = await new Promise((res, rej) => {
+      const url = URL.createObjectURL(file)
+      const im = new Image()
+      im.onload = () => {
+        URL.revokeObjectURL(url)
+        res(im)
+      }
+      im.onerror = rej
+      im.src = url
+    })
+  }
+  const f = Math.min(1, max / Math.max(src.width, src.height))
+  const cv = document.createElement('canvas')
+  cv.width = Math.round(src.width * f)
+  cv.height = Math.round(src.height * f)
+  cv.getContext('2d').drawImage(src, 0, 0, cv.width, cv.height)
+  return await new Promise((res) => cv.toBlob(res, 'image/jpeg', qualidade))
+}
+
+/** Sobe as fotos de uma devolução. Devolve quantas subiram. */
+export async function subirFotos(devolucaoId, blobs) {
+  let n = 0
+  for (const [i, blob] of blobs.entries()) {
+    const path = `${devolucaoId}/${Date.now()}-${i}.jpg`
+    const up = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: 'image/jpeg' })
+    if (up.error) throw up.error
+    const { error } = await supabase.from('def_devolucao_fotos').insert({ devolucao_id: devolucaoId, path })
+    if (error) throw error
+    n++
+  }
+  return n
+}
+
+/** Links temporários (1 h) para mostrar as fotos. */
+export async function linksFotos(paths) {
+  if (!paths.length) return {}
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(paths, 3600)
+  if (error) throw error
+  return Object.fromEntries(data.map((d) => [d.path, d.signedUrl]))
+}
+
+/* ---------------- contestação (só admin) ---------------- */
+async function contestar(corpo) {
+  const { data, error } = await supabase.functions.invoke('devolucoes-contestar', { body: corpo })
+  if (error) {
+    // a função devolve { erro } mesmo com status de erro
+    try {
+      const j = await error.context?.json?.()
+      if (j?.erro) throw new Error(j.erro)
+    } catch (e) {
+      if (e?.message) throw e
+    }
+    throw error
+  }
+  return data
+}
+export const opcoesContestacao = (devolucaoId) => contestar({ acao: 'opcoes', devolucao_id: devolucaoId })
+export const enviarContestacao = (dados) => contestar({ acao: 'enviar', ...dados })
+
+export async function listarContestacoes(ids) {
+  if (!ids.length) return []
+  const { data, error } = await supabase
+    .from('def_dev_contestacao')
+    .select('id, devolucao_id, plataforma, motivo_texto, ok, resposta, criado_em')
+    .in('devolucao_id', ids)
+    .order('criado_em', { ascending: false })
   if (error) throw error
   return data
 }
